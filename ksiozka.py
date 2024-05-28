@@ -95,53 +95,68 @@ class CookbookApp:
             self.tree.insert('', tk.END, values=recipe)
 
     def add_recipe(self):
-        recipe_id = simpledialog.askinteger("Dodaj Przepis", "Podaj numer:")
-        if recipe_id is not None:
-            title = simpledialog.askstring("Dodaj Przepis", "Podaj tytuł:")
-            if title:
-                ingredients = simpledialog.askstring("Dodaj Przepis", "Podaj składniki:")
-                instructions = simpledialog.askstring("Dodaj Przepis", "Podaj instrukcje:")
-                category = simpledialog.askstring("Dodaj Przepis", "Podaj kategorię:")
-                if ingredients and instructions and category:
-                    add_recipe(recipe_id, title, ingredients, instructions, category)
-                    self.load_recipes()
+        try:
+            recipe_id = simpledialog.askinteger("Dodaj Przepis", "Podaj numer:")
+            if recipe_id is not None:
+                title = simpledialog.askstring("Dodaj Przepis", "Podaj tytuł:")
+                if title:
+                    ingredients = simpledialog.askstring("Dodaj Przepis", "Podaj składniki:")
+                    instructions = simpledialog.askstring("Dodaj Przepis", "Podaj instrukcje:")
+                    category = simpledialog.askstring("Dodaj Przepis", "Podaj kategorię:")
+                    if ingredients and instructions and category:
+                        add_recipe(recipe_id, title, ingredients, instructions, category)
+                        self.load_recipes()
+        except Exception as e:
+            messagebox.showerror("Błąd", f"Wystąpił błąd podczas dodawania przepisu: {e}")
 
     def edit_recipe(self):
         selected_item = self.tree.selection()
         if selected_item:
-            recipe_id = self.tree.item(selected_item)['values'][0]
-            title = simpledialog.askstring("Edytuj Przepis", "Podaj tytuł:")
-            if title:
-                ingredients = simpledialog.askstring("Edytuj Przepis", "Podaj składniki:")
-                instructions = simpledialog.askstring("Edytuj Przepis", "Podaj instrukcje:")
-                category = simpledialog.askstring("Edytuj Przepis", "Podaj kategorię:")
-                if ingredients and instructions and category:
-                    edit_recipe(recipe_id, title, ingredients, instructions, category)
-                    self.load_recipes()
+            try:
+                recipe_id = self.tree.item(selected_item)['values'][0]
+                title = simpledialog.askstring("Edytuj Przepis", "Podaj tytuł:")
+                if title:
+                    ingredients = simpledialog.askstring("Edytuj Przepis", "Podaj składniki:")
+                    instructions = simpledialog.askstring("Edytuj Przepis", "Podaj instrukcje:")
+                    category = simpledialog.askstring("Edytuj Przepis", "Podaj kategorię:")
+                    if ingredients and instructions and category:
+                        edit_recipe(recipe_id, title, ingredients, instructions, category)
+                        self.load_recipes()
+            except Exception as e:
+                messagebox.showerror("Błąd", f"Wystąpił błąd podczas edytowania przepisu: {e}")
 
     def delete_recipe(self):
         selected_item = self.tree.selection()
         if selected_item:
-            recipe_id = self.tree.item(selected_item)['values'][0]
-            delete_recipe(recipe_id)
-            self.load_recipes()
+            try:
+                recipe_id = self.tree.item(selected_item)['values'][0]
+                delete_recipe(recipe_id)
+                self.load_recipes()
+            except Exception as e:
+                messagebox.showerror("Błąd", f"Wystąpił błąd podczas usuwania przepisu: {e}")
 
     def show_recipe_details(self, event):
         selected_item = self.tree.selection()
         if selected_item:
-            recipe_id = self.tree.item(selected_item)['values'][0]
-            recipe = get_recipe_details(recipe_id)
-            if recipe:
-                title, ingredients, instructions, category = recipe
-                detail_window = tk.Toplevel(self.root)
-                detail_window.title(f"Przepis: {title}")
-                detail_text = f"Tytuł: {title}\n\nSkładniki:\n{ingredients}\n\nInstrukcje:\n{instructions}"
-                label = tk.Label(detail_window, text=detail_text, justify=tk.LEFT)
-                label.pack(padx=10, pady=10)
+            try:
+                recipe_id = self.tree.item(selected_item)['values'][0]
+                recipe = get_recipe_details(recipe_id)
+                if recipe:
+                    title, ingredients, instructions, category = recipe
+                    detail_window = tk.Toplevel(self.root)
+                    detail_window.title(f"Przepis: {title}")
+                    detail_text = f"Tytuł: {title}\n\nSkładniki:\n{ingredients}\n\nInstrukcje:\n{instructions}"
+                    label = tk.Label(detail_window, text=detail_text, justify=tk.LEFT)
+                    label.pack(padx=10, pady=10)
+            except Exception as e:
+                messagebox.showerror("Błąd", f"Wystąpił błąd podczas wyświetlania szczegółów przepisu: {e}")
 
 
 if __name__ == '__main__':
-    init_db()
-    root = tk.Tk()
-    app = CookbookApp(root)
-    root.mainloop()
+    try:
+        init_db()
+        root = tk.Tk()
+        app = CookbookApp(root)
+        root.mainloop()
+    except Exception as e:
+        messagebox.showerror("Błąd", f"Wystąpił błąd podczas uruchamiania aplikacji: {e}")
