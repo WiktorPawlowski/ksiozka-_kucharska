@@ -4,159 +4,160 @@ from tkinter import simpledialog
 from tkinter import ttk
 from tkinter import messagebox
 
+def inicjalizuj_baze():
+    polaczenie = sqlite3.connect('ksiazka_kucharska.db')
+    kursor = polaczenie.cursor()
+    kursor.execute('''CREATE TABLE IF NOT EXISTS przepisy
+                      (id INTEGER PRIMARY KEY,
+                       tytul TEXT NOT NULL,
+                       skladniki TEXT NOT NULL,
+                       instrukcje TEXT NOT NULL,
+                       kategoria TEXT NOT NULL)''')
+    polaczenie.commit()
+    polaczenie.close()
 
-# Funkcje zarządzania bazą danych
-def init_db():
-    conn = sqlite3.connect('cookbook.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS recipes
-                 (id INTEGER PRIMARY KEY,
-                  title TEXT NOT NULL,
-                  ingredients TEXT NOT NULL,
-                  instructions TEXT NOT NULL,
-                  category TEXT NOT NULL)''')
-    conn.commit()
-    conn.close()
+def dodaj_przepis(id_przepisu, tytul, skladniki, instrukcje, kategoria):
+    polaczenie = sqlite3.connect('ksiazka_kucharska.db')
+    kursor = polaczenie.cursor()
+    kursor.execute("INSERT INTO przepisy (id, tytul, skladniki, instrukcje, kategoria) VALUES (?, ?, ?, ?, ?)",
+                   (id_przepisu, tytul, skladniki, instrukcje, kategoria))
+    polaczenie.commit()
+    polaczenie.close()
 
+def edytuj_przepis(id_przepisu, tytul, skladniki, instrukcje, kategoria):
+    polaczenie = sqlite3.connect('ksiazka_kucharska.db')
+    kursor = polaczenie.cursor()
+    kursor.execute("UPDATE przepisy SET tytul = ?, skladniki = ?, instrukcje = ?, kategoria = ? WHERE id = ?",
+                   (tytul, skladniki, instrukcje, kategoria, id_przepisu))
+    polaczenie.commit()
+    polaczenie.close()
 
-def add_recipe(recipe_id, title, ingredients, instructions, category):
-    conn = sqlite3.connect('cookbook.db')
-    c = conn.cursor()
-    c.execute("INSERT INTO recipes (id, title, ingredients, instructions, category) VALUES (?, ?, ?, ?, ?)",
-              (recipe_id, title, ingredients, instructions, category))
-    conn.commit()
-    conn.close()
+def usun_przepis(id_przepisu):
+    polaczenie = sqlite3.connect('ksiazka_kucharska.db')
+    kursor = polaczenie.cursor()
+    kursor.execute("DELETE FROM przepisy WHERE id = ?", (id_przepisu,))
+    polaczenie.commit()
+    polaczenie.close()
 
+def pobierz_przepisy():
+    polaczenie = sqlite3.connect('ksiazka_kucharska.db')
+    kursor = polaczenie.cursor()
+    kursor.execute("SELECT id, tytul, kategoria FROM przepisy ORDER BY id")
+    przepisy = kursor.fetchall()
+    polaczenie.close()
+    return przepisy
 
-def edit_recipe(recipe_id, title, ingredients, instructions, category):
-    conn = sqlite3.connect('cookbook.db')
-    c = conn.cursor()
-    c.execute("UPDATE recipes SET title = ?, ingredients = ?, instructions = ?, category = ? WHERE id = ?",
-              (title, ingredients, instructions, category, recipe_id))
-    conn.commit()
-    conn.close()
+def pobierz_szczegoly_przepisu(id_przepisu):
+    polaczenie = sqlite3.connect('ksiazka_kucharska.db')
+    kursor = polaczenie.cursor()
+    kursor.execute("SELECT tytul, skladniki, instrukcje, kategoria FROM przepisy WHERE id = ?", (id_przepisu,))
+    przepis = kursor.fetchone()
+    polaczenie.close()
+    return przepis
 
+class AplikacjaKsiazkaKucharska:
+    def __init__(self, okno_glowne):
+        self.okno_glowne = okno_glowne
+        self.okno_glowne.title("Elektroniczna Książka Kucharska")
 
-def delete_recipe(recipe_id):
-    conn = sqlite3.connect('cookbook.db')
-    c = conn.cursor()
-    c.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
-    conn.commit()
-    conn.close()
+        self.drzewo = ttk.Treeview(okno_glowne, columns=('Numer', 'Tytul', 'Kategoria'), show='headings')
+        self.drzewo.heading('Numer', text='Numer')
+        self.drzewo.heading('Tytul', text='Tytuł')
+        self.drzewo.heading('Kategoria', text='Kategoria')
+        self.drzewo.pack(fill=tk.BOTH, expand=True)
 
+        self.drzewo.bind('<Double-1>', self.pokaz_szczegoly_przepisu)
 
-def get_recipes():
-    conn = sqlite3.connect('cookbook.db')
-    c = conn.cursor()
-    c.execute("SELECT id, title, category FROM recipes ORDER BY id")
-    recipes = c.fetchall()
-    conn.close()
-    return recipes
+        self.wczytaj_przepisy()
 
+        przycisk_dodaj = tk.Button(okno_glowne, text="Dodaj Przepis", command=self.dodaj_przepis)
+        przycisk_dodaj.pack(side=tk.LEFT)
 
-def get_recipe_details(recipe_id):
-    conn = sqlite3.connect('cookbook.db')
-    c = conn.cursor()
-    c.execute("SELECT title, ingredients, instructions, category FROM recipes WHERE id = ?", (recipe_id,))
-    recipe = c.fetchone()
-    conn.close()
-    return recipe
+        przycisk_edytuj = tk.Button(okno_glowne, text="Edytuj Przepis", command=self.edytuj_przepis)
+        przycisk_edytuj.pack(side=tk.LEFT)
 
+        przycisk_usun = tk.Button(okno_glowne, text="Usuń Przepis", command=self.usun_przepis)
+        przycisk_usun.pack(side=tk.LEFT)
 
-# Klasa aplikacji GUI
-class CookbookApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Elektroniczna Książka Kucharska")
+    def wczytaj_przepisy(self):
+        for przepis in self.drzewo.get_children():
+            self.drzewo.delete(przepis)
+        for przepis in pobierz_przepisy():
+            self.drzewo.insert('', tk.END, values=przepis)
 
-        self.tree = ttk.Treeview(root, columns=('Numer', 'Title', 'Category'), show='headings')
-        self.tree.heading('Numer', text='Numer')
-        self.tree.heading('Title', text='Tytuł')
-        self.tree.heading('Category', text='Kategoria')
-        self.tree.pack(fill=tk.BOTH, expand=True)
-
-        self.tree.bind('<Double-1>', self.show_recipe_details)
-
-        self.load_recipes()
-
-        add_button = tk.Button(root, text="Dodaj Przepis", command=self.add_recipe)
-        add_button.pack(side=tk.LEFT)
-
-        edit_button = tk.Button(root, text="Edytuj Przepis", command=self.edit_recipe)
-        edit_button.pack(side=tk.LEFT)
-
-        delete_button = tk.Button(root, text="Usuń Przepis", command=self.delete_recipe)
-        delete_button.pack(side=tk.LEFT)
-
-    def load_recipes(self):
-        for recipe in self.tree.get_children():
-            self.tree.delete(recipe)
-        for recipe in get_recipes():
-            self.tree.insert('', tk.END, values=recipe)
-
-    def add_recipe(self):
+    def dodaj_przepis(self):
         try:
-            recipe_id = simpledialog.askinteger("Dodaj Przepis", "Podaj numer:")
-            if recipe_id is not None:
-                title = simpledialog.askstring("Dodaj Przepis", "Podaj tytuł:")
-                if title:
-                    ingredients = simpledialog.askstring("Dodaj Przepis", "Podaj składniki:")
-                    instructions = simpledialog.askstring("Dodaj Przepis", "Podaj instrukcje:")
-                    category = simpledialog.askstring("Dodaj Przepis", "Podaj kategorię:")
-                    if ingredients and instructions and category:
-                        add_recipe(recipe_id, title, ingredients, instructions, category)
-                        self.load_recipes()
+            id_przepisu = simpledialog.askinteger("Dodaj Przepis", "Podaj numer:", parent=self.okno_glowne)
+            if id_przepisu is not None:
+                tytul = simpledialog.askstring("Dodaj Przepis", "Podaj tytuł:", parent=self.okno_glowne)
+                if tytul:
+                    skladniki = simpledialog.askstring("Dodaj Przepis", "Podaj składniki:", parent=self.okno_glowne)
+                    instrukcje = simpledialog.askstring("Dodaj Przepis", "Podaj instrukcje:", parent=self.okno_glowne)
+                    kategoria = simpledialog.askstring("Dodaj Przepis", "Podaj kategorię:", parent=self.okno_glowne)
+                    if skladniki and instrukcje and kategoria:
+                        dodaj_przepis(id_przepisu, tytul, skladniki, instrukcje, kategoria)
+                        self.wczytaj_przepisy()
         except Exception as e:
             messagebox.showerror("Błąd", f"Wystąpił błąd podczas dodawania przepisu: {e}")
 
-    def edit_recipe(self):
-        selected_item = self.tree.selection()
-        if selected_item:
+    def edytuj_przepis(self):
+        wybrany_element = self.drzewo.selection()
+        if wybrany_element:
             try:
-                recipe_id = self.tree.item(selected_item)['values'][0]
-                title = simpledialog.askstring("Edytuj Przepis", "Podaj tytuł:")
-                if title:
-                    ingredients = simpledialog.askstring("Edytuj Przepis", "Podaj składniki:")
-                    instructions = simpledialog.askstring("Edytuj Przepis", "Podaj instrukcje:")
-                    category = simpledialog.askstring("Edytuj Przepis", "Podaj kategorię:")
-                    if ingredients and instructions and category:
-                        edit_recipe(recipe_id, title, ingredients, instructions, category)
-                        self.load_recipes()
+                id_przepisu = self.drzewo.item(wybrany_element)['values'][0]
+                tytul = simpledialog.askstring("Edytuj Przepis", "Podaj tytuł:", parent=self.okno_glowne)
+                if tytul:
+                    skladniki = simpledialog.askstring("Edytuj Przepis", "Podaj składniki:", parent=self.okno_glowne)
+                    instrukcje = simpledialog.askstring("Edytuj Przepis", "Podaj instrukcje:", parent=self.okno_glowne)
+                    kategoria = simpledialog.askstring("Edytuj Przepis", "Podaj kategorię:", parent=self.okno_glowne)
+                    if skladniki and instrukcje and kategoria:
+                        edytuj_przepis(id_przepisu, tytul, skladniki, instrukcje, kategoria)
+                        self.wczytaj_przepisy()
             except Exception as e:
                 messagebox.showerror("Błąd", f"Wystąpił błąd podczas edytowania przepisu: {e}")
 
-    def delete_recipe(self):
-        selected_item = self.tree.selection()
-        if selected_item:
+    def usun_przepis(self):
+        wybrany_element = self.drzewo.selection()
+        if wybrany_element:
             try:
-                recipe_id = self.tree.item(selected_item)['values'][0]
-                delete_recipe(recipe_id)
-                self.load_recipes()
+                id_przepisu = self.drzewo.item(wybrany_element)['values'][0]
+                usun_przepis(id_przepisu)
+                self.wczytaj_przepisy()
             except Exception as e:
                 messagebox.showerror("Błąd", f"Wystąpił błąd podczas usuwania przepisu: {e}")
 
-    def show_recipe_details(self, event):
-        selected_item = self.tree.selection()
-        if selected_item:
+    def pokaz_szczegoly_przepisu(self, event):
+        wybrany_element = self.drzewo.selection()
+        if wybrany_element:
             try:
-                recipe_id = self.tree.item(selected_item)['values'][0]
-                recipe = get_recipe_details(recipe_id)
-                if recipe:
-                    title, ingredients, instructions, category = recipe
-                    detail_window = tk.Toplevel(self.root)
-                    detail_window.title(f"Przepis: {title}")
-                    detail_text = f"Tytuł: {title}\n\nSkładniki:\n{ingredients}\n\nInstrukcje:\n{instructions}"
-                    label = tk.Label(detail_window, text=detail_text, justify=tk.LEFT)
-                    label.pack(padx=10, pady=10)
+                id_przepisu = self.drzewo.item(wybrany_element)['values'][0]
+                przepis = pobierz_szczegoly_przepisu(id_przepisu)
+                if przepis:
+                    tytul, skladniki, instrukcje, kategoria = przepis
+                    okno_szczegolow = tk.Toplevel(self.okno_glowne)
+                    okno_szczegolow.title(f"Przepis: {tytul}")
+                    tekst_szczegolow = f"Tytuł: {tytul}\n\nSkładniki:\n{skladniki}\n\nInstrukcje:\n{instrukcje}"
+                    etykieta = tk.Label(okno_szczegolow, text=tekst_szczegolow, justify=tk.LEFT)
+                    etykieta.pack(padx=10, pady=10)
+                    
+                    okno_szerokosc = 300
+                    okno_wysokosc = 200
+                    szerokosc_ekranu = self.okno_glowne.winfo_width()
+                    wysokosc_ekranu = self.okno_glowne.winfo_height()
+                    x_pozycja = self.okno_glowne.winfo_rootx() + (szerokosc_ekranu // 2) - (okno_szerokosc // 2)
+                    y_pozycja = self.okno_glowne.winfo_rooty() + (wysokosc_ekranu // 2) - (okno_wysokosc // 2)
+                    okno_szczegolow.geometry(f"{okno_szerokosc}x{okno_wysokosc}+{x_pozycja}+{y_pozycja}")
+
+                    okno_szczegolow.transient(self.okno_glowne)
+                    okno_szczegolow.grab_set()
             except Exception as e:
                 messagebox.showerror("Błąd", f"Wystąpił błąd podczas wyświetlania szczegółów przepisu: {e}")
 
-
 if __name__ == '__main__':
     try:
-        init_db()
-        root = tk.Tk()
-        app = CookbookApp(root)
-        root.mainloop()
+        inicjalizuj_baze()
+        okno_glowne = tk.Tk()
+        aplikacja = AplikacjaKsiazkaKucharska(okno_glowne)
+        okno_glowne.mainloop()
     except Exception as e:
         messagebox.showerror("Błąd", f"Wystąpił błąd podczas uruchamiania aplikacji: {e}")
